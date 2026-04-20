@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dosya Tablo Çıkarıcı</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a;
+      --border: rgba(255,255,255,0.08); --border-hover: rgba(255,255,255,0.18);
+      --text: #e8eaf0; --text-muted: #7a7f94; --text-hint: #4a4f63;
+      --accent: #6c8ef7; --accent-bg: rgba(108,142,247,0.1); --accent-border: rgba(108,142,247,0.35);
+      --success: #4ade80; --success-bg: rgba(74,222,128,0.1);
+      --danger: #f87171; --danger-bg: rgba(248,113,113,0.1);
+      --radius: 10px; --radius-sm: 6px;
+    }
+    body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 2rem 1rem; }
+    .container { max-width: 860px; margin: 0 auto; }
+
+    .header { display: flex; align-items: center; gap: 14px; margin-bottom: 2rem; }
+    .header-icon { width: 44px; height: 44px; border-radius: var(--radius); background: var(--accent-bg); border: 1px solid var(--accent-border); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .header-icon svg { width: 20px; height: 20px; color: var(--accent); }
+    .header-title { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+    .header-sub { font-size: 13px; color: var(--text-muted); margin-top: 2px; }
+
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.5rem; margin-bottom: 1.25rem; }
+    .card-title { font-size: 11px; font-weight: 600; letter-spacing: 0.7px; text-transform: uppercase; color: var(--text-muted); margin-bottom: 1rem; }
+
+    .format-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 1rem; }
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; letter-spacing: 0.4px; border: 1px solid; }
+    .badge-pdf { background: rgba(248,113,113,0.12); color: #f87171; border-color: rgba(248,113,113,0.3); }
+    .badge-excel { background: rgba(74,222,128,0.12); color: #4ade80; border-color: rgba(74,222,128,0.3); }
+    .badge-csv { background: rgba(251,191,36,0.12); color: #fbbf24; border-color: rgba(251,191,36,0.3); }
+    .badge-html { background: rgba(108,142,247,0.12); color: #6c8ef7; border-color: rgba(108,142,247,0.3); }
+
+    .upload-zone { border: 1.5px dashed var(--border-hover); border-radius: var(--radius); padding: 2.5rem; text-align: center; cursor: pointer; position: relative; transition: border-color 0.15s, background 0.15s; }
+    .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: var(--accent-bg); }
+    .upload-zone input { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+    .upload-icon-wrap { width: 48px; height: 48px; border-radius: var(--radius); background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; }
+    .upload-icon-wrap svg { width: 22px; height: 22px; color: var(--text-muted); }
+    .upload-text { font-size: 14px; font-weight: 500; }
+    .upload-hint { font-size: 12px; color: var(--text-hint); margin-top: 6px; }
+
+    .file-info { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: var(--success-bg); border: 1px solid rgba(74,222,128,0.25); border-radius: var(--radius-sm); margin-top: 1rem; }
+    .file-info svg { width: 18px; height: 18px; color: var(--success); flex-shrink: 0; }
+    .file-type-badge { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; margin-left: auto; }
+    .file-name { font-size: 13px; font-weight: 500; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .file-size { font-size: 12px; color: var(--text-muted); margin-top: 1px; }
+
+    .mode-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    .mode-card { padding: 12px 14px; border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+    .mode-card:hover { border-color: var(--border-hover); }
+    .mode-card.selected { border-color: var(--accent); background: var(--accent-bg); }
+    .mode-card .mode-label { font-size: 13px; font-weight: 500; }
+    .mode-card.selected .mode-label { color: var(--accent); }
+    .mode-card .mode-desc { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    .btn-primary { width: 100%; padding: 11px; background: var(--accent); color: #fff; border: none; border-radius: var(--radius-sm); font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; margin-top: 1rem; }
+    .btn-primary:hover { opacity: 0.88; }
+    .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+    .status { display: flex; align-items: center; gap: 10px; padding: 11px 14px; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; color: var(--text-muted); margin-top: 1rem; }
+    .spinner { width: 15px; height: 15px; border: 2px solid var(--border-hover); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; flex-shrink: 0; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error { padding: 11px 14px; background: var(--danger-bg); border: 1px solid rgba(248,113,113,0.3); border-radius: var(--radius-sm); font-size: 13px; color: var(--danger); margin-top: 1rem; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+    .stat { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px 14px; }
+    .stat-num { font-size: 22px; font-weight: 700; letter-spacing: -0.5px; color: var(--accent); }
+    .stat-lbl { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+    .tab-row { display: flex; gap: 4px; margin-bottom: 1rem; border-bottom: 1px solid var(--border); }
+    .tab-btn { padding: 8px 16px; background: none; border: none; font-size: 13px; color: var(--text-muted); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color 0.15s; }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 1.25rem; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .data-table th { padding: 9px 14px; text-align: left; font-size: 11px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--text-muted); background: var(--surface2); border-bottom: 1px solid var(--border); }
+    .data-table td { padding: 9px 14px; color: var(--text); border-bottom: 1px solid var(--border); }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: var(--surface2); }
+    .tbl-label { font-size: 12px; color: var(--accent); font-weight: 500; margin-bottom: 8px; }
+
+    .json-box { background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #a8b4d0; max-height: 380px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; line-height: 1.6; }
+    .ai-box { padding: 1.25rem; background: var(--surface2); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 14px; line-height: 1.75; }
+
+    .export-row { display: flex; gap: 8px; margin-top: 1rem; }
+    .btn-outline { flex: 1; padding: 9px; background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 13px; color: var(--text-muted); cursor: pointer; transition: border-color 0.15s, color 0.15s; }
+    .btn-outline:hover { border-color: var(--border-hover); color: var(--text); }
+    .empty { padding: 2.5rem; text-align: center; font-size: 13px; color: var(--text-hint); }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="header-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+        <polyline points="14 2 14 8 20 8"/>
+        <line x1="8" y1="13" x2="16" y2="13"/>
+        <line x1="8" y1="17" x2="16" y2="17"/>
+      </svg>
+    </div>
+    <div>
+      <div class="header-title">Dosya Tablo Çıkarıcı</div>
+      <div class="header-sub">PDF, Excel, CSV ve HTML dosyalarından tablo ve veri çıkar</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Dosya Yükle</div>
+    <div class="format-badges">
+      <span class="badge badge-pdf">PDF</span>
+      <span class="badge badge-excel">XLSX</span>
+      <span class="badge badge-excel">XLS</span>
+      <span class="badge badge-csv">CSV</span>
+      <span class="badge badge-html">HTML</span>
+    </div>
+    <div class="upload-zone" id="dropZone">
+      <input type="file" id="fileInput" accept=".pdf,.xlsx,.xls,.csv,.html,.htm" />
+      <div class="upload-icon-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <polyline points="16 16 12 12 8 16"/>
+          <line x1="12" y1="12" x2="12" y2="21"/>
+          <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/>
+        </svg>
+      </div>
+      <div class="upload-text">Dosyayı sürükle veya tıkla</div>
+      <div class="upload-hint">PDF · Excel · CSV · HTML · Maks. 20 MB</div>
+    </div>
+    <div id="fileInfo" style="display:none"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Çıkarma Modu</div>
+    <div class="mode-grid">
+      <div class="mode-card" data-mode="tables" onclick="selectMode(this,'tables')">
+        <div class="mode-label">Tablolar</div>
+        <div class="mode-desc">Sadece tablo verilerini çıkar</div>
+      </div>
+      <div class="mode-card" data-mode="structured" onclick="selectMode(this,'structured')">
+        <div class="mode-label">Yapılandırılmış</div>
+        <div class="mode-desc">Anahtar–değer alanları</div>
+      </div>
+      <div class="mode-card selected" data-mode="both" onclick="selectMode(this,'both')">
+        <div class="mode-label">Hepsi + AI özeti</div>
+        <div class="mode-desc">Tablo + JSON + analiz</div>
+      </div>
+    </div>
+    <button class="btn-primary" id="extractBtn" disabled onclick="startExtraction()">Çıkarmayı Başlat</button>
+    <div id="statusBar" style="display:none" class="status">
+      <div class="spinner"></div>
+      <span id="statusText">İşleniyor...</span>
+    </div>
+    <div id="errorBox" style="display:none" class="error"></div>
+  </div>
+
+  <div id="results" style="display:none" class="card">
+    <div class="stats-row" id="statsRow"></div>
+    <div class="tab-row">
+      <button class="tab-btn active" onclick="switchTab(this,'tableView')">Tablolar</button>
+      <button class="tab-btn" onclick="switchTab(this,'jsonView')">JSON</button>
+      <button class="tab-btn" onclick="switchTab(this,'aiView')">AI Analizi</button>
+    </div>
+    <div id="tableView"></div>
+    <div id="jsonView" style="display:none"></div>
+    <div id="aiView" style="display:none"></div>
+    <div class="export-row">
+      <button class="btn-outline" onclick="exportCSV()">CSV İndir</button>
+      <button class="btn-outline" onclick="exportJSON()">JSON İndir</button>
+      <button class="btn-outline" onclick="exportExcel()">Excel İndir</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let selectedMode = 'both', uploadedFile = null, extractedData = null;
+
+  const TYPE_COLORS = { pdf: '#f87171', xlsx: '#4ade80', xls: '#4ade80', csv: '#fbbf24', html: '#6c8ef7', htm: '#6c8ef7' };
+
+  function selectMode(el, mode) {
+    document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+    el.classList.add('selected'); selectedMode = mode;
+  }
+  function switchTab(btn, viewId) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    ['tableView','jsonView','aiView'].forEach(id => document.getElementById(id).style.display = id === viewId ? 'block' : 'none');
+  }
+
+  const dropZone = document.getElementById('dropZone');
+  const fileInput = document.getElementById('fileInput');
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+  fileInput.addEventListener('change', e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
+
+  function handleFile(f) {
+    uploadedFile = f;
+    const ext = f.name.split('.').pop().toLowerCase();
+    const size = f.size > 1024*1024 ? (f.size/1024/1024).toFixed(1)+' MB' : Math.round(f.size/1024)+' KB';
+    const color = TYPE_COLORS[ext] || '#7a7f94';
+    const fi = document.getElementById('fileInfo');
+    fi.style.display = 'flex'; fi.className = 'file-info';
+    fi.innerHTML = `
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+      <div style="flex:1;overflow:hidden">
+        <div class="file-name">${f.name}</div>
+        <div class="file-size">${size}</div>
+      </div>
+      <span class="file-type-badge" style="background:${color}22;color:${color};border:1px solid ${color}44">${ext.toUpperCase()}</span>`;
+    document.getElementById('extractBtn').disabled = false;
+  }
+
+  async function startExtraction() {
+    if (!uploadedFile) return;
+    document.getElementById('extractBtn').disabled = true;
+    document.getElementById('errorBox').style.display = 'none';
+    document.getElementById('results').style.display = 'none';
+    const status = document.getElementById('statusBar');
+    const statusText = document.getElementById('statusText');
+    status.style.display = 'flex';
+    statusText.textContent = 'Dosya sunucuya gönderiliyor...';
+
+    try {
+      const formData = new FormData();
+      formData.append('file', uploadedFile);
+      formData.append('mode', selectedMode);
+      statusText.textContent = 'AI tablolar çıkarıyor...';
+      const res = await fetch('/api/extract', { method: 'POST', body: formData });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.error || 'Sunucu hatası');
+      extractedData = json.data;
+      renderResults(json.data);
+      status.style.display = 'none';
+      document.getElementById('results').style.display = 'block';
+    } catch(err) {
+      status.style.display = 'none';
+      const eb = document.getElementById('errorBox');
+      eb.style.display = 'block'; eb.textContent = 'Hata: ' + err.message;
+      document.getElementById('extractBtn').disabled = false;
+    }
+  }
+
+  function renderResults(data) {
+    const tables = data.tables || [];
+    const structured = data.structured_data || {};
+    const totalRows = tables.reduce((s,t) => s+(t.rows?.length||0), 0);
+    const ext = (data.filename||'').split('.').pop().toUpperCase();
+
+    document.getElementById('statsRow').innerHTML = `
+      <div class="stat"><div class="stat-num">${tables.length}</div><div class="stat-lbl">Tablo</div></div>
+      <div class="stat"><div class="stat-num">${totalRows}</div><div class="stat-lbl">Toplam satır</div></div>
+      <div class="stat"><div class="stat-num">${Object.keys(structured).length}</div><div class="stat-lbl">Alan</div></div>
+      <div class="stat"><div class="stat-num">${data.pages||1}</div><div class="stat-lbl">${data.sheets ? 'Sayfa/Sheet' : 'Sayfa'}</div></div>`;
+
+    let tableHTML = '';
+    if (tables.length === 0 && Object.keys(structured).length === 0) {
+      tableHTML = '<div class="empty">Çıkarılabilir tablo bulunamadı.</div>';
+    }
+    tables.forEach((t,i) => {
+      tableHTML += `<div style="margin-bottom:1.25rem"><div class="tbl-label">${t.title||'Tablo '+(i+1)}${t.page?' · Sayfa '+t.page:''}</div>`;
+      tableHTML += '<div class="table-wrap"><table class="data-table"><thead><tr>';
+      (t.headers||[]).forEach(h => tableHTML += `<th>${h}</th>`);
+      tableHTML += '</tr></thead><tbody>';
+      (t.rows||[]).forEach(row => { tableHTML += '<tr>'; row.forEach(c => tableHTML += `<td>${c??''}</td>`); tableHTML += '</tr>'; });
+      tableHTML += '</tbody></table></div></div>';
+    });
+    if (Object.keys(structured).length > 0) {
+      tableHTML += '<div style="margin-bottom:1.25rem"><div class="tbl-label">Yapılandırılmış Veriler</div><div class="table-wrap"><table class="data-table"><thead><tr><th>Alan</th><th>Değer</th></tr></thead><tbody>';
+      Object.entries(structured).forEach(([k,v]) => tableHTML += `<tr><td>${k}</td><td>${v}</td></tr>`);
+      tableHTML += '</tbody></table></div></div>';
+    }
+    document.getElementById('tableView').innerHTML = tableHTML;
+    document.getElementById('jsonView').innerHTML = `<div class="json-box">${JSON.stringify(data, null, 2)}</div>`;
+    document.getElementById('aiView').innerHTML = `<div class="ai-box">${data.summary||'Özet mevcut değil.'}</div>`;
+  }
+
+  function exportCSV() {
+    if (!extractedData?.tables?.length) return;
+    let csv = '';
+    extractedData.tables.forEach(t => {
+      csv += (t.title||'Tablo') + '\n';
+      csv += (t.headers||[]).join(',') + '\n';
+      (t.rows||[]).forEach(r => csv += r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',') + '\n');
+      csv += '\n';
+    });
+    download('veriler.csv', csv, 'text/csv');
+  }
+
+  function exportJSON() {
+    if (!extractedData) return;
+    download('veriler.json', JSON.stringify(extractedData, null, 2), 'application/json');
+  }
+
+  function exportExcel() {
+    if (!extractedData?.tables?.length) return;
+    const rows = [['Tablo', 'Sütun', 'Satır No', 'Değer']];
+    extractedData.tables.forEach(t => {
+      (t.rows||[]).forEach((row, ri) => {
+        row.forEach((cell, ci) => {
+          rows.push([t.title||'Tablo', (t.headers||[])[ci]||`Sütun${ci+1}`, ri+1, cell]);
+        });
+      });
+    });
+    const csv = rows.map(r => r.map(c=>`"${String(c||'').replace(/"/g,'""')}"`).join(',')).join('\n');
+    download('veriler_excel.csv', '\uFEFF' + csv, 'text/csv;charset=utf-8');
+  }
+
+  function download(name, content, type) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([content], {type}));
+    a.download = name; a.click();
+  }
+</script>
+</body>
+</html>
