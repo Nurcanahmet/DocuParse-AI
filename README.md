@@ -1,11 +1,11 @@
-# PDF Tablo Çıkarıcı (Groq - ÜCRETSİZ)
+# DocuParse AI
 
-## Kurulum
+DocuParse AI is a smart tool that helps you extract data from different file types like PDF, Excel, CSV, and HTML.  
+It can find tables and structured data and also give a simple AI summary.  
+This tool makes it easy to understand and use data from documents.
 
-1. npm install
-2. .env dosyasına Groq API key yaz:
-   GROQ_API_KEY=gsk_xxxxxxxxxxxxxx
-3. npm run dev
-4. http://localhost:3000
-
-Groq ücretsiz, Türkiye'de çalışıyor, çok hızlı.
+## Features
+- Extract tables from files
+- Get structured data (JSON)
+- AI summary and analysis
+- Supports PDF, Excel, CSV, HTML
